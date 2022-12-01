@@ -29,6 +29,5 @@ pub fn solve(input: &str) -> usize {
     elves
         .into_iter()
         .take(3)
-        .reduce(|sum, elf| sum + elf)
-        .unwrap()
+        .sum()
 }
