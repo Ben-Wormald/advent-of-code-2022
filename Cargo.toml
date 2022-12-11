@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.5"
+num-bigint = "0.4.3"
 structopt = "0.3.26"
