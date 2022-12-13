@@ -47,6 +47,10 @@ impl Token {
 
         (Token::List(current_token), i)
     }
+
+    fn divider(num: u8) -> Token {
+        Token::List(vec!(Token::List(vec!(Token::Num(num)))))
+    }
 }
 
 impl Ord for Token {
@@ -56,22 +60,20 @@ impl Ord for Token {
             (Token::Num(_), Token::List(_)) => Token::List(vec!(self.clone())).cmp(other),
             (Token::List(_), Token::Num(_)) => self.cmp(&Token::List(vec!(other.clone()))),
             (Token::List(list_left), Token::List(list_right)) => {
-                let mut list_ordering = Ordering::Less;
+                let mut list_ordering = Ordering::Equal;
 
                 for (i, left) in list_left.iter().enumerate() {
                     if let Some(right) = list_right.get(i) {
-                        let ordering = left.cmp(right);
+                        list_ordering = left.cmp(right);
 
-                        match ordering {
-                            Ordering::Equal => (),
-                            _ => {
-                                list_ordering = ordering;
-                                break;
-                            },
+                        if list_ordering != Ordering::Equal {
+                            break;
                         }
-                    } else {
-                        list_ordering = Ordering::Greater;
                     }
+                }
+
+                if list_ordering == Ordering::Equal {
+                    list_ordering = list_left.len().cmp(&list_right.len());
                 }
 
                 list_ordering
@@ -92,7 +94,7 @@ impl PartialEq for Token {
     }
 }
 
-fn process(input: &str) -> Vec<(Token, Token)> {
+fn process_pairs(input: &str) -> Vec<(Token, Token)> {
     input
         .split("\n\n")
         .map(|pair| pair
@@ -104,8 +106,15 @@ fn process(input: &str) -> Vec<(Token, Token)> {
         .collect()
 }
 
-pub fn solve(input: &str) -> usize {
-    let pairs = process(input);
+fn process_packets(input: &str) -> Vec<Token> {
+    input
+        .split_whitespace()
+        .map(|line| Token::from_str(line).0)
+        .collect()
+}
+
+pub fn solve_part_one(input: &str) -> usize {
+    let pairs = process_pairs(input);
     
     pairs
         .iter()
@@ -116,4 +125,21 @@ pub fn solve(input: &str) -> usize {
                 _ => sum + i + 1,
             }
         })
+}
+
+pub fn solve(input: &str) -> usize {
+    let mut packets = process_packets(input);
+
+    let mut dividers = vec!(Token::divider(2), Token::divider(6));
+    packets.append(&mut dividers);
+
+    packets.sort();
+    
+    let div_idx_2 = packets.iter()
+        .find_position(|packet| **packet == Token::divider(2)).unwrap().0 + 1;
+    
+    let div_idx_6 = packets.iter()
+        .find_position(|packet| **packet == Token::divider(6)).unwrap().0 + 1;
+
+    div_idx_2 * div_idx_6
 }
