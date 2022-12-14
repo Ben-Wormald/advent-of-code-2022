@@ -8,9 +8,9 @@ struct Opt {
     test: bool,
 }
 
-mod solutions { pub mod day_13; }
-use solutions::day_13::solve;
-const INPUT: &str = "./input/13";
+mod solutions { pub mod day_14; }
+use solutions::day_14::solve;
+const INPUT: &str = "./input/14";
 const TEST_INPUT: &str = "./input/test";
 
 fn main() {
