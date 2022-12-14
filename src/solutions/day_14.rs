@@ -1,13 +1,6 @@
 use itertools::Itertools;
 
 #[derive(Clone, Debug, PartialEq)]
-enum Cell {
-    Air,
-    Rock,
-    Sand,
-}
-
-#[derive(Debug)]
 struct Coord {
     x: usize,
     y: usize,
@@ -15,8 +8,10 @@ struct Coord {
 
 #[derive(Debug)]
 struct Grid {
-    cells: Vec<Vec<Cell>>,
-    x_offest: usize,
+    cells: Vec<Coord>,
+    x_lower: usize,
+    x_upper: usize,
+    y_upper: usize,
 }
 
 enum Fall {
@@ -27,11 +22,11 @@ enum Fall {
 
 impl Grid {
     fn new(paths: Vec<Vec<Coord>>, x_lower: usize, x_upper: usize, y_upper: usize) -> Grid {
-        let cells = vec![vec![Cell::Air; y_upper + 1].clone(); x_upper - x_lower + 1];
-
         let mut grid = Grid {
-            cells,
-            x_offest: x_lower,
+            cells: vec!(),
+            x_lower,
+            x_upper,
+            y_upper,
         };
 
         paths
@@ -54,7 +49,7 @@ impl Grid {
 
                     for x in x_range {
                         for y in y_range.clone() {
-                            grid.set_cell(&Coord { x, y }, Cell::Rock);
+                            grid.cells.push(Coord { x, y })
                         }
                     }
                 })
@@ -63,22 +58,8 @@ impl Grid {
         grid
     }
 
-    fn get_cell(&self, coord: &Coord) -> &Cell {
-        let x = coord.x - self.x_offest;
-        self.cells
-            .get(x).expect(&format!("bad x {}", x))
-            .get(coord.y).expect(&format!("bad y {}", coord.y))
-    }
-
-    fn get_cell_mut(&mut self, coord: &Coord) -> &mut Cell {
-        let x = coord.x - self.x_offest;
-        self.cells
-            .get_mut(x).expect(&format!("bad x {}", x))
-            .get_mut(coord.y).expect(&format!("bad y {}", coord.y))
-    }
-
-    fn set_cell(&mut self, coord: &Coord, cell: Cell) {
-        *self.get_cell_mut(coord) = cell;
+    fn is_cell(&self, coord: &Coord) -> bool {
+        self.cells.iter().find(|cell| *cell == coord).is_some()
     }
 
     fn fall(&self, coord: &Coord) -> Fall {
@@ -91,7 +72,7 @@ impl Grid {
         for option in options {
             if self.is_out(&option) {
                 return Fall::Out;
-            } else if *self.get_cell(&option) == Cell::Air {
+            } else if !self.is_cell(&option) {
                 return Fall::Move(option);
             }
         }
@@ -100,12 +81,17 @@ impl Grid {
     }
 
     fn is_out(&self, coord: &Coord) -> bool {
-        let x = coord.x as isize - self.x_offest as isize;
+        coord.x < self.x_lower || coord.x > self.x_upper || coord.y > self.y_upper
+    }
 
-        let is_x_out = x < 0 || x > self.cells.len() as isize;
-        let is_y_out = coord.y >= self.cells.first().unwrap().len();
+    fn add_floor(&mut self) {
+        self.x_lower = 0;
+        self.x_upper = 1000;
+        self.y_upper += 2;
 
-        is_x_out || is_y_out
+        for x in self.x_lower..=self.x_upper {
+            self.cells.push(Coord { x, y: self.y_upper });
+        }
     }
 }
 
@@ -139,7 +125,7 @@ fn process(input: &str) -> Grid {
     grid
 }
 
-pub fn solve(input: &str) -> usize {
+pub fn solve_part_one(input: &str) -> usize {
     let mut grid = process(input);
 
     let mut sand_count = 0;
@@ -152,7 +138,7 @@ pub fn solve(input: &str) -> usize {
             match grid.fall(&sand_coord) {
                 Fall::Move(coord) => sand_coord = coord,
                 Fall::Stay => {
-                    grid.set_cell(&sand_coord, Cell::Sand);
+                    grid.cells.push(sand_coord);
                     sand_count += 1;
                     break;
                 },
@@ -160,6 +146,38 @@ pub fn solve(input: &str) -> usize {
                     done = true;
                     break;
                 }
+            }
+        }
+    }
+
+    sand_count
+}
+
+pub fn solve(input: &str) -> usize {
+    let mut grid = process(input);
+
+    grid.add_floor();
+
+    let mut sand_count = 0;
+    let mut done = false;
+    let origin = Coord { x: 500, y: 0 };
+
+    while !done {
+        let mut sand_coord = origin.clone();
+
+        loop {
+            match grid.fall(&sand_coord) {
+                Fall::Move(coord) => sand_coord = coord,
+                Fall::Stay => {
+                    grid.cells.push(sand_coord.clone());
+                    sand_count += 1;
+
+                    if sand_coord == origin {
+                        done = true;
+                    }
+                    break;
+                },
+                Fall::Out => panic!("sand escaped! {:?}", sand_coord),
             }
         }
     }
