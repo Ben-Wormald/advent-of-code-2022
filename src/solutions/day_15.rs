@@ -4,6 +4,8 @@ use std::cmp::max;
 const TARGET_TEST_Y: isize = 10;
 const TARGET_Y: isize = 2000000;
 
+const LIMIT_Y: isize = 4000000;
+
 #[derive(Debug, Eq, PartialEq, Hash, Clone)]
 struct Coord {
     x: isize,
@@ -24,10 +26,9 @@ impl Sensor {
     }
 }
 
-pub fn solve(input: &str) -> isize {
+pub fn solve_part_one(input: &str) -> isize {
     let sensors = process(input);
-    
-    let ranges = get_ranges(&sensors);
+    let ranges = get_y_ranges(&sensors, TARGET_Y);
 
     let mut covered = 0;
     let mut current_start = ranges.first().unwrap().0;
@@ -45,6 +46,39 @@ pub fn solve(input: &str) -> isize {
         .count() as isize;
 
     covered
+}
+
+pub fn solve(input: &str) -> isize {
+    let sensors = process(input);
+    let mut distress_beacon = None;
+
+    for y in 0..=LIMIT_Y {
+        let ranges = get_y_ranges(&sensors, y);
+    
+        if ranges.is_empty() {
+            continue;
+        }
+
+        let mut current_start = ranges.first().unwrap().0;
+    
+        for range in &ranges {
+            if range.0 > current_start {
+                distress_beacon = Some((current_start, y));
+                break;
+            }
+
+            current_start = max(current_start, range.0);
+            current_start = max(current_start, range.1 + 1);
+        }
+
+        if distress_beacon.is_some() {
+            break;
+        }
+    }
+
+    let distress_beacon = distress_beacon.expect("no distress beacon found!");
+
+    distress_beacon.0 * LIMIT_Y + distress_beacon.1
 }
 
 fn process(input: &str) -> Vec<Sensor> {
@@ -68,12 +102,12 @@ fn process(input: &str) -> Vec<Sensor> {
         .collect()
 }
 
-fn get_ranges(sensors: &Vec<Sensor>) -> Vec<(isize, isize)> {
+fn get_y_ranges(sensors: &Vec<Sensor>, target: isize) -> Vec<(isize, isize)> {
     let mut ranges: Vec<(isize, isize)> = sensors
         .iter()
         .map(|sensor| {
             let beacon_distance = sensor.distance();
-            let target_distance = (sensor.coord.y - TARGET_Y).abs();
+            let target_distance = (sensor.coord.y - target).abs();
 
             if target_distance > beacon_distance {
                 None
