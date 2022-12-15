@@ -14,21 +14,21 @@ struct Coord {
 
 #[derive(Debug)]
 struct Sensor {
-    coord: Coord,
-    closest_beacon: Coord,
+    pos: Coord,
+    beacon: Coord,
 }
 
 impl Sensor {
     fn distance(&self) -> isize {
-        let d_x = self.coord.x - self.closest_beacon.x;
-        let d_y = self.coord.y - self.closest_beacon.y;
+        let d_x = self.pos.x - self.beacon.x;
+        let d_y = self.pos.y - self.beacon.y;
         d_x.abs() + d_y.abs()
     }
 }
 
 pub fn solve_part_one(input: &str) -> isize {
     let sensors = process(input);
-    let ranges = get_y_ranges(&sensors, TARGET_Y);
+    let ranges = get_ranges(&sensors, TARGET_Y);
 
     let mut covered = 0;
     let mut current_start = ranges.first().unwrap().0;
@@ -40,7 +40,7 @@ pub fn solve_part_one(input: &str) -> isize {
     }
 
     covered -= sensors.iter()
-        .map(|sensor| &sensor.closest_beacon)
+        .map(|sensor| &sensor.beacon)
         .unique()
         .filter(|beacon| beacon.y == TARGET_Y)
         .count() as isize;
@@ -53,7 +53,7 @@ pub fn solve(input: &str) -> isize {
     let mut distress_beacon = None;
 
     for y in 0..=LIMIT_Y {
-        let ranges = get_y_ranges(&sensors, y);
+        let ranges = get_ranges(&sensors, y);
     
         if ranges.is_empty() {
             continue;
@@ -85,7 +85,8 @@ fn process(input: &str) -> Vec<Sensor> {
     input
         .lines()
         .map(|line| {
-            let line = line.replace("Sensor at x=", "")
+            let line = line
+                .replace("Sensor at x=", "")
                 .replace(", y=", ",")
                 .replace(": closest beacon is at x=", ",");
 
@@ -95,30 +96,29 @@ fn process(input: &str) -> Vec<Sensor> {
                 .collect_tuple().unwrap();
 
             Sensor {
-                coord: Coord { x: s_x, y: s_y },
-                closest_beacon: Coord { x: b_x, y: b_y },
+                pos: Coord { x: s_x, y: s_y },
+                beacon: Coord { x: b_x, y: b_y },
             }
         })
         .collect()
 }
 
-fn get_y_ranges(sensors: &Vec<Sensor>, target: isize) -> Vec<(isize, isize)> {
+fn get_ranges(sensors: &Vec<Sensor>, target: isize) -> Vec<(isize, isize)> {
     let mut ranges: Vec<(isize, isize)> = sensors
         .iter()
-        .map(|sensor| {
+        .filter_map(|sensor| {
             let beacon_distance = sensor.distance();
-            let target_distance = (sensor.coord.y - target).abs();
+            let target_distance = (sensor.pos.y - target).abs();
 
             if target_distance > beacon_distance {
                 None
             } else {
-                let range_start = sensor.coord.x - (beacon_distance - target_distance);
-                let range_end = sensor.coord.x + (beacon_distance - target_distance);
+                let range_start = sensor.pos.x - (beacon_distance - target_distance);
+                let range_end = sensor.pos.x + (beacon_distance - target_distance);
 
                 Some((range_start, range_end))
             }
         })
-        .filter_map(|range| range)
         .collect();
 
     ranges.sort_by(|a, b| a.0.cmp(&b.0));
