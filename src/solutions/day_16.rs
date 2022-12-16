@@ -61,7 +61,7 @@ impl Graph {
     }
 }
 
-pub fn solve(input: &str) -> usize {
+pub fn solve_part_one(input: &str) -> usize {
     let graph = Graph::new(input);
 
     let current_node = START.to_string();
@@ -71,6 +71,49 @@ pub fn solve(input: &str) -> usize {
     let moves = get_best_path(&graph, current_node, activated, MINUTES, vec!(), 0, &mut memo);
 
     moves.1
+}
+
+pub fn solve(input: &str) -> usize {
+    let graph = Graph::new(input);
+
+    let current_node = START.to_string();
+    let activated: HashSet<String> = HashSet::new();
+    let mut memo: Memo = HashMap::new();
+
+    let moves_a = get_best_path(
+        &graph,
+        current_node.clone(),
+        activated,
+        MINUTES - 4,
+        vec!(),
+        0,
+        &mut memo,
+    );
+
+    let mut activated: HashSet<String> = HashSet::new();
+
+    moves_a.0
+        .iter()
+        .for_each(|m| match m {
+            Action::Activate(node) => {
+                activated.insert(node.to_string());
+            },
+            Action::Move(_) => (),
+        });
+
+    let mut memo: Memo = HashMap::new();
+
+    let moves_b = get_best_path(
+        &graph,
+        current_node,
+        activated,
+        MINUTES - 4,
+        vec!(),
+        0,
+        &mut memo,
+    );
+
+    moves_a.1 + moves_b.1
 }
 
 fn get_best_path(
