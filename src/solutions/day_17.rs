@@ -1,8 +1,9 @@
-use std::{ops::Add, cmp::max};
+use std::{ops::Add, cmp::max, collections::HashSet};
 
-const COUNT: usize = 2022;
+const COUNT_ONE: usize = 2022;
+const COUNT: usize = 1000000000000;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 struct Cell {
     x: isize,
     y: isize,
@@ -20,7 +21,7 @@ impl Add for Cell {
 }
 
 impl Cell {
-    fn move_cell(&self, dir: &Dir) -> Cell {
+    fn moved(&self, dir: &Dir) -> Cell {
         match dir {
             Dir::Left => Cell {
                 x: self.x - 1,
@@ -119,7 +120,7 @@ enum Dir {
 
 pub fn solve(input: &str) -> isize {
     let mut height = 0;
-    let mut occupied = Vec::<Cell>::new();
+    let mut occupied = HashSet::<Cell>::new();
 
     let jets = parse(input);
     let mut jet = 0;
@@ -127,7 +128,7 @@ pub fn solve(input: &str) -> isize {
     let rock_types = [RockType::A, RockType::B, RockType::C, RockType::D, RockType::E];
     let mut rock_type = 0;
 
-    for _rock in 0..COUNT {
+    for _rock in 0..COUNT_ONE {
         let mut rock = Rock {
             rock_type: rock_types[rock_type],
             pos: Cell { x: 2, y: height + 4 },
@@ -139,7 +140,7 @@ pub fn solve(input: &str) -> isize {
         }
 
         loop {
-            let new_pos = rock.pos.move_cell(jets.get(jet).unwrap());
+            let new_pos = rock.pos.moved(jets.get(jet).unwrap());
 
             jet += 1;
             if jet == jets.len() {
@@ -153,7 +154,7 @@ pub fn solve(input: &str) -> isize {
                 rock.pos = new_pos;
             }
 
-            let new_pos = rock.pos.move_cell(&Dir::Down);
+            let new_pos = rock.pos.moved(&Dir::Down);
 
             let is_floor = new_pos.y == 0;
             let can_move = !is_floor && !is_collision(&occupied, &new_pos, &rock);
@@ -163,6 +164,7 @@ pub fn solve(input: &str) -> isize {
             } else {
                 settle(&mut occupied, &rock);
                 height = max(height, rock.pos.y + rock.height() - 1);
+                occupied = remove_out_of_reach(occupied, height);
                 break;
             }
         }
@@ -183,7 +185,7 @@ fn parse(input: &str) -> Vec<Dir> {
         .collect()
 }
 
-fn is_collision(occupied: &Vec<Cell>, pos: &Cell, rock: &Rock) -> bool {
+fn is_collision(occupied: &HashSet<Cell>, pos: &Cell, rock: &Rock) -> bool {
     rock
         .cells()
         .iter()
@@ -193,12 +195,52 @@ fn is_collision(occupied: &Vec<Cell>, pos: &Cell, rock: &Rock) -> bool {
         })
 }
 
-fn settle(occupied: &mut Vec<Cell>, rock: &Rock) {
+fn settle(occupied: &mut HashSet<Cell>, rock: &Rock) {
     rock
         .cells()
         .iter()
         .for_each(|cell| {
             let cell = *cell + rock.pos;
-            occupied.push(cell);
+            occupied.insert(cell);
         });
+}
+
+fn remove_out_of_reach(occupied: HashSet<Cell>, height: isize) -> HashSet<Cell> {
+    let mut empty = HashSet::<Cell>::new();
+    let mut occupied_edge = HashSet::<Cell>::new();
+    
+    empty.insert(Cell { x: 0, y: height + 1 });
+    let mut explored_count = 1;
+    let mut done = false;
+
+    while !done {
+        for cell in empty.clone().iter() {
+            let mut neighbours = Vec::<Cell>::new();
+
+            if cell.x > 0 {
+                neighbours.push(cell.moved(&Dir::Left));
+            }
+            if cell.x < 6 {
+                neighbours.push(cell.moved(&Dir::Right));
+            }
+            if cell.y > 1 {
+                neighbours.push(cell.moved(&Dir::Down));
+            }
+
+            for neighbour in neighbours.iter() {
+                if occupied.contains(neighbour) {
+                    occupied_edge.insert(*neighbour);
+                } else {
+                    empty.insert(*neighbour);
+                }
+            }
+        }
+
+        if explored_count == empty.len() + occupied_edge.len() {
+            done = true;
+        }
+        explored_count = empty.len() + occupied_edge.len();
+    }
+
+    occupied_edge
 }
