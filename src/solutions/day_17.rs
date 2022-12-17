@@ -1,4 +1,4 @@
-use std::{ops::Add, cmp::max, collections::HashSet};
+use std::{ops::Add, cmp::max, collections::{HashSet, HashMap}};
 
 const COUNT_ONE: usize = 2022;
 const COUNT: usize = 1000000000000;
@@ -118,17 +118,46 @@ enum Dir {
     Down,
 }
 
+type Permutation = (String, usize, usize);
+
+trait CellSet {
+    fn to_string(&self, height: isize) -> String;
+}
+
+impl CellSet for HashSet<Cell> {
+    fn to_string(&self, height: isize) -> String {
+        let mut strings = self
+            .iter()
+            .map(|cell| format!("{},{}", cell.x, cell.y - height))
+            .collect::<Vec<String>>();
+
+        strings.sort();
+
+        strings.join(",")
+    }
+}
+
 pub fn solve(input: &str) -> isize {
     let mut height = 0;
     let mut occupied = HashSet::<Cell>::new();
 
-    let jets = parse(input);
-    let mut jet = 0;
-
     let rock_types = [RockType::A, RockType::B, RockType::C, RockType::D, RockType::E];
     let mut rock_type = 0;
 
-    for _rock in 0..COUNT_ONE {
+    let jets = parse(input);
+    let mut jet = 0;
+
+    let target_count = COUNT;
+
+    let mut permutations = HashMap::<Permutation, (usize, isize)>::new();
+    let mut cycle_found = false;
+    let mut cycle_start_height = 0;
+    let mut cycle_height = 0;
+    let mut cycle_start = 0;
+    let mut cycle_len = 0;
+    let mut remaining_count = 0;
+
+    for count in 0..target_count {
         let mut rock = Rock {
             rock_type: rock_types[rock_type],
             pos: Cell { x: 2, y: height + 4 },
@@ -165,12 +194,45 @@ pub fn solve(input: &str) -> isize {
                 settle(&mut occupied, &rock);
                 height = max(height, rock.pos.y + rock.height() - 1);
                 occupied = remove_out_of_reach(occupied, height);
+                
+                if !cycle_found {
+                    let permutation = (occupied.to_string(height), rock_type, jet);
+
+                    if let Some(prev_permutation) = permutations.get(&permutation) {
+                        cycle_found = true;
+    
+                        cycle_start = prev_permutation.0;
+                        cycle_len = count - prev_permutation.0;
+    
+                        cycle_start_height = prev_permutation.1;
+                        cycle_height = height - prev_permutation.1;
+    
+                        remaining_count = (target_count - cycle_start) % cycle_len;
+                    } else {
+                        permutations.insert(permutation, (count, height));
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if cycle_found {
+            remaining_count -= 1;
+            if remaining_count == 0 {
                 break;
             }
         }
     }
-    
-    height
+
+    if cycle_found {
+        let n_cycles = ((target_count - cycle_start) / cycle_len) as isize;
+        let remaining_height = height - cycle_start_height - cycle_height;
+
+        cycle_start_height + n_cycles * cycle_height + remaining_height
+    } else {
+        height
+    }
 }
 
 fn parse(input: &str) -> Vec<Dir> {
