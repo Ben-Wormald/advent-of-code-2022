@@ -1,6 +1,5 @@
-use std::{collections::HashSet, ops::Add};
-
 use itertools::Itertools;
+use std::{collections::HashSet, ops::Add};
 
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 struct Cube {
