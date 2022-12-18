@@ -59,7 +59,7 @@ pub fn solve_part_one(input: &str) -> usize {
             let empty_neighbours = cube
                 .neighbours()
                 .iter()
-                .filter(|neighbour| !cubes.contains(&neighbour))
+                .filter(|neighbour| !cubes.contains(neighbour))
                 .count();
 
             surfaces + empty_neighbours
@@ -77,7 +77,7 @@ pub fn solve(input: &str) -> usize {
                 .neighbours()
                 .iter()
                 .filter(|neighbour|
-                    outside_cubes.contains(&neighbour) && !cubes.contains(&neighbour)
+                    outside_cubes.contains(neighbour) && !cubes.contains(neighbour)
                 )
                 .count();
 
@@ -109,7 +109,7 @@ fn get_outside_cubes(cubes: &HashSet<Cube>) -> HashSet<Cube> {
                 let in_z = neighbour.z >= min_z && neighbour.z <= max_z;
 
                 if in_x && in_y && in_z {
-                    if cubes.contains(&neighbour) {
+                    if cubes.contains(neighbour) {
                         occupied.insert(*neighbour);
                     } else {
                         outside.insert(*neighbour);
